@@ -315,10 +315,7 @@ app.delete('/api/students/:id/photos/:fileId', requireAuth, async (req, res) => 
   }
 });
 
-// Local static serving. Vercel serves public/** from its CDN automatically.
-if (!process.env.VERCEL) {
-  app.use(express.static(path.join(__dirname, 'public')));
-}
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/student', requireAuth, (req, res) => {
   if (process.env.VERCEL) return res.redirect('/student.html');
