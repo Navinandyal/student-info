@@ -24,6 +24,17 @@ Google Sheets is used for persistent student records because Vercel's local func
 4. `npm start`
 5. Open `http://localhost:3000`.
 
+For Vercel, add every variable from `.env` in Project Settings > Environment
+Variables. In particular, `SESSION_SECRET` must be set for the **Production**
+environment. Generate a value with:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Do not use the placeholder value or commit `.env` to GitHub. Redeploy after
+changing Vercel environment variables.
+
 ## Reuse the Google account you already authorized
 
 Your older project contains `credentials/google-token.json`. Its `refresh_token`
