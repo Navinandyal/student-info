@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Records</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="page-shell">
+    <header class="topbar">
+      <h2 class="topbar-title">Student Records</h2>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <a href="/student" class="secondary-btn" style="text-decoration:none; display:inline-block;">Add Student</a>
+        <button id="logoutBtn" class="secondary-btn" type="button">Logout</button>
+      </div>
+    </header>
+
+    <section class="card form-card" style="margin:0 auto;">
+      <h1>Saved Students</h1>
+      <p class="subtitle">View and update previously uploaded student details.</p>
+      <div id="status" class="status" role="status"></div>
+      <div id="studentTableWrap" class="table-wrap"></div>
+    </section>
+  </main>
+
+  <script src="/students.js"></script>
+</body>
+</html>

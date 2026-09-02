@@ -1,0 +1,7 @@
+node_modules/
+.env
+data/*.db
+data/*.db-*
+credentials/google-token.json
+credentials/service-account.json
+.DS_Store

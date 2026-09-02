@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Information Form</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="page-shell">
+    <header class="topbar">
+      <h2 class="topbar-title">Student Information</h2>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <a href="/students" class="secondary-btn" style="text-decoration:none; display:inline-block;">View Students</a>
+        <button id="logoutBtn" class="secondary-btn" type="button">Logout</button>
+      </div>
+    </header>
+
+    <section class="card form-card" style="margin:0 auto;">
+      <h1>Add Student</h1>
+      <p class="subtitle">Enter student details and select one or more photos.</p>
+
+      <form id="studentForm">
+        <div class="form-grid">
+          <div class="field">
+            <label for="studentId">Student Number</label>
+            <input id="studentId" name="studentId" placeholder="STU001" required />
+          </div>
+          <div class="field">
+            <label for="studentName">Student Name</label>
+            <input id="studentName" name="studentName" placeholder="Rahul Patil" required />
+          </div>
+          <div class="field">
+            <label for="className">Class</label>
+            <input id="className" name="className" placeholder="10" required />
+          </div>
+          <div class="field">
+            <label for="division">Division</label>
+            <input id="division" name="division" placeholder="A" required />
+          </div>
+          <div class="field full">
+            <label for="rollNumber">Roll Number</label>
+            <input id="rollNumber" name="rollNumber" placeholder="21" required />
+          </div>
+        </div>
+
+        <section class="photo-section">
+          <h2>Photos</h2>
+          <div class="photo-picker">
+            <input id="photos" type="file" accept="image/*" multiple />
+            <p class="help">Select multiple photos. Maximum 15 photos, up to 10 MB each.</p>
+          </div>
+          <div id="previewGrid" class="preview-grid"></div>
+        </section>
+
+        <div class="actions">
+          <button id="saveBtn" class="primary-btn" type="submit">Save Student</button>
+          <div id="status" class="status" role="status"></div>
+        </div>
+      </form>
+    </section>
+  </main>
+  <script src="/student.js"></script>
+</body>
+</html>
