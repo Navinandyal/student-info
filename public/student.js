@@ -10,19 +10,10 @@ let selectedFiles = [];
 async function ensureAuthenticated() {
   const response = await fetch('/api/me');
   const data = await response.json();
-  if (!data.authenticated) window.location.href = '/';
-
-  const driveResponse = await fetch('/api/google/status');
-  const driveData = await driveResponse.json();
-  if (!driveData.connected) {
-    statusBox.className = 'status error';
-    statusBox.textContent = 'Google Drive is not connected yet. Redirecting to Google authorization...';
-    window.setTimeout(() => {
-      window.location.href = '/auth/google';
-    }, 1200);
+  if (!data.authenticated) {
+    window.location.href = '/';
     return false;
   }
-
   return true;
 }
 
@@ -34,12 +25,14 @@ async function populateNextStudentId() {
       const idField = document.getElementById('studentId');
       if (idField && !idField.value) idField.value = result.nextStudentId;
     }
-  } catch (_error) {
-    // Ignore if no students exist yet.
+  } catch (_) {
+    // The form stays usable even if automatic ID generation is unavailable.
   }
 }
 
-ensureAuthenticated().then(() => populateNextStudentId());
+(async () => {
+  if (await ensureAuthenticated()) await populateNextStudentId();
+})();
 
 logoutBtn.addEventListener('click', async () => {
   await fetch('/api/logout', { method: 'POST' });
@@ -78,10 +71,25 @@ previewGrid.addEventListener('click', (event) => {
   renderPreviews();
 });
 
+async function uploadOnePhoto(studentRecordId, file, index, total) {
+  statusBox.className = 'status info';
+  statusBox.textContent = `Optimizing and uploading photo ${index + 1} of ${total}...`;
+  const prepared = await window.prepareImageForUpload(file);
+  const data = new FormData();
+  data.append('photo', prepared, prepared.name);
+
+  const response = await fetch(`/api/students/${studentRecordId}/photos`, {
+    method: 'POST',
+    body: data,
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.message || `Photo ${index + 1} upload failed.`);
+}
+
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
 
-  if (selectedFiles.length === 0) {
+  if (!selectedFiles.length) {
     statusBox.className = 'status error';
     statusBox.textContent = 'Please select at least one photo.';
     return;
@@ -89,31 +97,44 @@ form.addEventListener('submit', async (event) => {
 
   saveBtn.disabled = true;
   statusBox.className = 'status info';
-  statusBox.textContent = 'Saving student and uploading photos...';
+  statusBox.textContent = 'Saving student information...';
 
-  const data = new FormData();
+  const payload = {};
   ['studentId', 'studentName', 'className', 'division', 'rollNumber'].forEach((name) => {
-    data.append(name, form.elements[name].value);
+    payload[name] = form.elements[name].value.trim();
   });
-  selectedFiles.forEach((file) => data.append('photos', file, file.name));
 
+  let createdStudentId = null;
   try {
-    const response = await fetch('/api/students', { method: 'POST', body: data });
+    const response = await fetch('/api/students', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
     const result = await response.json();
+
     if (response.status === 401) {
       window.location.href = '/';
       return;
     }
-    if (!response.ok) throw new Error(result.message || 'Save failed.');
+    if (!response.ok) throw new Error(result.message || 'Could not save the student.');
+
+    createdStudentId = result.student.id;
+    for (let i = 0; i < selectedFiles.length; i += 1) {
+      await uploadOnePhoto(createdStudentId, selectedFiles[i], i, selectedFiles.length);
+    }
 
     statusBox.className = 'status success';
-    statusBox.textContent = `${result.message} Folder: ${result.student.driveFolderName}`;
+    statusBox.textContent = `Student and ${selectedFiles.length} photo(s) saved successfully.`;
     form.reset();
     selectedFiles = [];
     renderPreviews();
+    await populateNextStudentId();
   } catch (error) {
     statusBox.className = 'status error';
-    statusBox.textContent = error.message;
+    statusBox.textContent = createdStudentId
+      ? `${error.message} The student record was saved; use View Students to retry any missing photos.`
+      : error.message;
   } finally {
     saveBtn.disabled = false;
   }

@@ -1,100 +1,81 @@
-# Student Information App — Personal Google Drive OAuth
+# Student Information App — Personal Google Drive + Vercel
 
-Simple Node.js + Express + SQLite student information application.
+Simple Node.js + Express student-information application.
 
-## Flow
+## Current flow
 
-Login -> Student form -> Select multiple photos -> Save Student -> SQLite + personal Google My Drive
+Login -> Add/View Students -> Select multiple photos -> Save -> Google Sheet + Personal Google Drive
 
-Google Drive structure:
+There is **no Google login/authorization redirect after admin login**. Google access is configured once on the backend using a refresh token.
 
-```text
-My Drive/
-└── Student Photos/
-    └── STU001_Rahul_Patil/
-        ├── photo1.jpg
-        ├── photo2.jpg
-        └── photo3.jpg
-```
+## Storage
 
-## 1. Install
+- Student records: Google Sheet (`GOOGLE_SHEET_ID`)
+- Photos: your normal personal Google My Drive
+- Photo folders: `Student Photos/<STUDENT_ID>_<STUDENT_NAME>/`
 
-```bash
-npm install
-```
+Google Sheets is used for persistent student records because Vercel's local function filesystem is not a persistent SQLite database.
 
-Copy `.env.example` to `.env`.
+## Local setup
 
-## 2. Google Cloud setup
+1. `npm install`
+2. Copy `.env.example` to `.env`.
+3. Fill in the environment variables.
+4. `npm start`
+5. Open `http://localhost:3000`.
 
-1. Open Google Cloud Console.
-2. Create/select a project.
-3. Enable **Google Drive API**.
-4. Open **Google Auth Platform / OAuth consent screen**.
-5. Configure the app. If it is in Testing mode, add your Gmail address as a test user.
-6. Open **APIs & Services > Credentials**.
-7. Create **OAuth client ID**.
-8. Application type: **Web application**.
-9. Add this Authorized redirect URI exactly:
+## Reuse the Google account you already authorized
 
-```text
-http://localhost:3000/auth/google/callback
-```
+Your older project contains `credentials/google-token.json`. Its `refresh_token`
+is what this version needs in `GOOGLE_REFRESH_TOKEN`.
 
-10. Copy the Client ID and Client Secret into `.env`:
-
-```env
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
-GOOGLE_REDIRECT_URI=http://localhost:3000/auth/google/callback
-```
-
-Leave `GOOGLE_DRIVE_PARENT_FOLDER_ID` blank if you want `Student Photos` in the My Drive root.
-
-## 3. Start
+From the **old project folder** you can inspect that JSON or run the included
+migration helper after copying it temporarily into this project:
 
 ```bash
-npm start
+npm run show:refresh-token
 ```
 
-Open:
+Then add the value to `.env` and to Vercel Environment Variables. Delete the token
+file afterward. Never commit it.
 
-```text
-http://localhost:3000
-```
+## Required environment variables on Vercel
 
-Login using `ADMIN_USERNAME` and `ADMIN_PASSWORD` from `.env`.
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
+- `SESSION_SECRET`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REFRESH_TOKEN`
+- `GOOGLE_SHEET_ID`
+- `GOOGLE_DRIVE_PARENT_FOLDER_ID` (optional)
 
-## 4. Connect your Google Drive once
+You do not need `GOOGLE_DRIVE_SHARED_DRIVE_ID` and you do not need a service account.
 
-While logged in, open:
+## Deploy to Vercel from GitHub
 
-```text
-http://localhost:3000/auth/google
-```
+1. Push this project to GitHub.
+2. Open Vercel and import the GitHub repository.
+3. Add all required Environment Variables in Project Settings.
+4. Deploy. Vercel detects the exported Express app from `server.js`.
+5. Open the deployed URL and log in with your admin username/password.
 
-Choose the Gmail account whose My Drive should receive the student photos and approve access.
+No Google login page should appear during normal admin usage.
 
-After approval, the backend saves the OAuth token privately at:
+## Photo uploads on Vercel
 
-```text
-credentials/google-token.json
-```
+Vercel Functions have a 4.5 MB request payload limit. The UI keeps the multi-photo
+selection experience but optimizes photos in the browser and uploads them one by one.
+This prevents a group of photos from exceeding a single function request limit.
 
-Do not upload this file to GitHub or expose it to the browser.
+## Security
 
-Google returns short-lived access tokens; the stored refresh token lets the Node.js backend obtain new access tokens automatically without asking you to log in to Google every time.
+- Admin auth uses an HTTP-only signed cookie; there is no server-memory session dependency.
+- Google client secret and refresh token are backend environment variables only.
+- `.env`, OAuth token files and service-account files are excluded from Git/Vercel uploads.
+- Never expose `GOOGLE_REFRESH_TOKEN` in frontend JavaScript.
 
-## 5. Save students
+## Google OAuth note
 
-Return to `/student`, fill the form, choose photos, and click **Save Student**.
-
-The student fields are saved to SQLite and photos are uploaded to your own My Drive.
-
-## Notes
-
-- This version does not use a service account.
-- `GOOGLE_DRIVE_SHARED_DRIVE_ID` is not needed.
-- `service-account.json` is not needed.
-- For local development, the OAuth token is stored in a backend-only file.
-- In production, use a persistent encrypted secret/token store instead of an ephemeral filesystem.
+The refresh token must have access to the APIs/scopes used by this app. Your current
+project already requested Drive + Sheets access, so you can reuse its existing refresh token.

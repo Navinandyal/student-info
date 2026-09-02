@@ -1,12 +1,7 @@
-This project uses Google OAuth 2.0 for a normal personal Google Drive.
+Do not put production Google credentials in this folder when deploying to Vercel.
 
-DO NOT place a service-account JSON file here.
+The old local version stored credentials/google-token.json here. The Vercel-ready
+version reads GOOGLE_REFRESH_TOKEN from environment variables instead.
 
-After you log in to the app and open:
-  http://localhost:3000/auth/google
-
-the Google consent flow will run once. The backend will then create:
-  credentials/google-token.json
-
-That token file contains private OAuth credentials and must never be committed,
-shared publicly, or exposed to the frontend.
+Never commit google-token.json, service-account.json, .env, client secrets, or
+refresh tokens to GitHub.

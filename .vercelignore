@@ -1,10 +1,9 @@
+.git/
 node_modules/
 .env
 .env.*
 !.env.example
 credentials/google-token.json
 credentials/service-account.json
-data/*.db
-data/*.db-*
-.vercel/
-.DS_Store
+data/
+*.zip

@@ -15,7 +15,7 @@ async function loadStudents() {
   try {
     const response = await fetch('/api/students');
     const result = await response.json();
-
+    if (response.status === 401) return (window.location.href = '/');
     if (!response.ok) throw new Error(result.message || 'Could not load students.');
 
     if (!result.students || result.students.length === 0) {
@@ -27,17 +27,7 @@ async function loadStudents() {
 
     tableWrap.innerHTML = `
       <table class="student-table">
-        <thead>
-          <tr>
-            <th>Student ID</th>
-            <th>Name</th>
-            <th>Class</th>
-            <th>Division</th>
-            <th>Roll</th>
-            <th>Photos</th>
-            <th>Action</th>
-          </tr>
-        </thead>
+        <thead><tr><th>Student ID</th><th>Name</th><th>Class</th><th>Division</th><th>Roll</th><th>Photos</th><th>Action</th></tr></thead>
         <tbody>
           ${result.students.map((student) => `
             <tr>
@@ -51,8 +41,7 @@ async function loadStudents() {
             </tr>
           `).join('')}
         </tbody>
-      </table>
-    `;
+      </table>`;
 
     statusBox.className = 'status success';
     statusBox.textContent = `${result.students.length} student record(s) loaded.`;
@@ -65,70 +54,55 @@ async function loadStudents() {
 async function loadStudentById(id) {
   const response = await fetch(`/api/students/${id}`);
   const result = await response.json();
-
   if (!response.ok) throw new Error(result.message || 'Student not found.');
   return result.student;
 }
 
 function buildEditForm(student) {
   const photoHtml = (student.photos || []).length
-    ? `
-      <div class="photo-gallery">
-        <h3>Uploaded Photos</h3>
-        <div class="photo-grid">
-          ${student.photos.map((photo) => `
-            <div class="student-photo-card">
-              <img src="/api/photos/${encodeURIComponent(photo.drive_file_id)}" alt="${escapeAttribute(photo.original_name)}" />
-              <div class="student-photo-name">${escapeHtml(photo.original_name)}</div>
-              <button type="button" class="delete-photo-btn" data-photo-id="${escapeAttribute(photo.drive_file_id)}">Delete</button>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `
+    ? `<div class="photo-gallery"><h3>Uploaded Photos</h3><div class="photo-grid">
+        ${student.photos.map((photo) => `
+          <div class="student-photo-card">
+            <img src="/api/photos/${encodeURIComponent(photo.drive_file_id)}" alt="${escapeAttribute(photo.original_name)}" />
+            <div class="student-photo-name">${escapeHtml(photo.original_name)}</div>
+            <button type="button" class="delete-photo-btn" data-photo-id="${escapeAttribute(photo.drive_file_id)}">Delete</button>
+          </div>`).join('')}
+      </div></div>`
     : '<p class="empty-state">No photos were stored for this student.</p>';
 
-  const formHtml = `
+  return `
     <form id="editStudentForm" class="edit-form">
       <div class="form-grid">
-        <div class="field">
-          <label for="editStudentId">Student Number</label>
-          <input id="editStudentId" name="studentId" value="${escapeAttribute(student.student_id)}" required />
-        </div>
-        <div class="field">
-          <label for="editStudentName">Student Name</label>
-          <input id="editStudentName" name="studentName" value="${escapeAttribute(student.student_name)}" required />
-        </div>
-        <div class="field">
-          <label for="editClassName">Class</label>
-          <input id="editClassName" name="className" value="${escapeAttribute(student.class_name)}" required />
-        </div>
-        <div class="field">
-          <label for="editDivision">Division</label>
-          <input id="editDivision" name="division" value="${escapeAttribute(student.division)}" required />
-        </div>
-        <div class="field full">
-          <label for="editRollNumber">Roll Number</label>
-          <input id="editRollNumber" name="rollNumber" value="${escapeAttribute(student.roll_number)}" required />
-        </div>
+        <div class="field"><label for="editStudentId">Student Number</label><input id="editStudentId" name="studentId" value="${escapeAttribute(student.student_id)}" required /></div>
+        <div class="field"><label for="editStudentName">Student Name</label><input id="editStudentName" name="studentName" value="${escapeAttribute(student.student_name)}" required /></div>
+        <div class="field"><label for="editClassName">Class</label><input id="editClassName" name="className" value="${escapeAttribute(student.class_name)}" required /></div>
+        <div class="field"><label for="editDivision">Division</label><input id="editDivision" name="division" value="${escapeAttribute(student.division)}" required /></div>
+        <div class="field full"><label for="editRollNumber">Roll Number</label><input id="editRollNumber" name="rollNumber" value="${escapeAttribute(student.roll_number)}" required /></div>
       </div>
-
       ${photoHtml}
-
       <div class="photo-upload-box">
         <label for="addPhotosInput" class="upload-label">Add Photos</label>
         <input id="addPhotosInput" type="file" accept="image/*" multiple />
         <button type="button" id="addPhotosBtn" class="secondary-btn">Upload New Photos</button>
       </div>
-
       <div class="actions">
         <button type="submit" class="primary-btn">Update Student</button>
         <button type="button" class="secondary-btn" id="cancelEditBtn">Cancel</button>
       </div>
-    </form>
-  `;
+    </form>`;
+}
 
-  return formHtml;
+async function uploadPhotosSequentially(studentId, files) {
+  for (let i = 0; i < files.length; i += 1) {
+    statusBox.className = 'status info';
+    statusBox.textContent = `Optimizing and uploading photo ${i + 1} of ${files.length}...`;
+    const prepared = await window.prepareImageForUpload(files[i]);
+    const formData = new FormData();
+    formData.append('photo', prepared, prepared.name);
+    const response = await fetch(`/api/students/${studentId}/photos`, { method: 'POST', body: formData });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || `Could not upload photo ${i + 1}.`);
+  }
 }
 
 async function openEditForm(studentId) {
@@ -146,20 +120,14 @@ async function openEditForm(studentId) {
         division: form.division.value.trim(),
         rollNumber: form.rollNumber.value.trim(),
       };
-
       statusBox.className = 'status info';
       statusBox.textContent = 'Updating student...';
-
       try {
         const response = await fetch(`/api/students/${studentId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
         });
         const result = await response.json();
-
         if (!response.ok) throw new Error(result.message || 'Update failed.');
-
         statusBox.className = 'status success';
         statusBox.textContent = result.message;
         await loadStudents();
@@ -173,25 +141,16 @@ async function openEditForm(studentId) {
 
     document.getElementById('addPhotosBtn').addEventListener('click', async () => {
       const input = document.getElementById('addPhotosInput');
-      const files = Array.from(input.files || []);
+      const files = Array.from(input.files || []).slice(0, 15);
       if (!files.length) {
         statusBox.className = 'status error';
         statusBox.textContent = 'Choose at least one photo to upload.';
         return;
       }
-
-      const formData = new FormData();
-      files.forEach((file) => formData.append('photos', file, file.name));
-
-      statusBox.className = 'status info';
-      statusBox.textContent = 'Uploading photos...';
-
       try {
-        const response = await fetch(`/api/students/${studentId}/photos`, { method: 'POST', body: formData });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.message || 'Could not upload photos.');
+        await uploadPhotosSequentially(studentId, files);
         statusBox.className = 'status success';
-        statusBox.textContent = result.message;
+        statusBox.textContent = `${files.length} photo(s) uploaded successfully.`;
         await openEditForm(studentId);
       } catch (error) {
         statusBox.className = 'status error';
@@ -203,10 +162,8 @@ async function openEditForm(studentId) {
       button.addEventListener('click', async () => {
         const photoId = button.dataset.photoId;
         if (!photoId) return;
-
         statusBox.className = 'status info';
         statusBox.textContent = 'Deleting photo...';
-
         try {
           const response = await fetch(`/api/students/${studentId}/photos/${encodeURIComponent(photoId)}`, { method: 'DELETE' });
           const result = await response.json();
@@ -228,8 +185,7 @@ async function openEditForm(studentId) {
 
 tableWrap.addEventListener('click', async (event) => {
   const button = event.target.closest('[data-id]');
-  if (!button) return;
-  await openEditForm(button.dataset.id);
+  if (button) await openEditForm(button.dataset.id);
 });
 
 logoutBtn.addEventListener('click', async () => {
@@ -239,16 +195,10 @@ logoutBtn.addEventListener('click', async () => {
 
 function escapeHtml(value) {
   return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
+    .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;').replaceAll("'", '&#039;');
 }
-
-function escapeAttribute(value) {
-  return escapeHtml(value ?? '').replaceAll('`', '&#96;');
-}
+function escapeAttribute(value) { return escapeHtml(value ?? '').replaceAll('`', '&#96;'); }
 
 (async () => {
   await ensureAuthenticated();
