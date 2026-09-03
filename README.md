@@ -54,6 +54,8 @@ file afterward. Never commit it.
 
 - `ADMIN_USERNAME`
 - `ADMIN_PASSWORD`
+- `STUDENT_USERNAME`
+- `STUDENT_PASSWORD`
 - `SESSION_SECRET`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
@@ -70,6 +72,10 @@ You do not need `GOOGLE_DRIVE_SHARED_DRIVE_ID` and you do not need a service acc
 3. Add all required Environment Variables in Project Settings.
 4. Deploy. Vercel detects the exported Express app from `server.js`.
 5. Open the deployed URL and log in with your admin username/password.
+
+The admin account can add, view, edit, and delete student records. The separate
+student account can add student details and upload photos, but cannot view or
+edit existing records.
 
 No Google login page should appear during normal admin usage.
 

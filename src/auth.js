@@ -15,9 +15,9 @@ function sign(value) {
   return crypto.createHmac('sha256', getSessionSecret()).update(value).digest('base64url');
 }
 
-function createAuthToken(username) {
+function createAuthToken(username, role) {
   const payload = Buffer.from(
-    JSON.stringify({ username, exp: Date.now() + COOKIE_MAX_AGE_MS }),
+    JSON.stringify({ username, role, exp: Date.now() + COOKIE_MAX_AGE_MS }),
     'utf8'
   ).toString('base64url');
   return `${payload}.${sign(payload)}`;
@@ -67,8 +67,8 @@ function isRequestAuthenticated(req) {
   return Boolean(getAuthenticatedUser(req));
 }
 
-function setAuthCookie(res, username) {
-  const token = createAuthToken(username);
+function setAuthCookie(res, username, role = 'admin') {
+  const token = createAuthToken(username, role);
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: 'lax',
@@ -99,9 +99,27 @@ function requireAuth(req, res, next) {
   next();
 }
 
+function requireRole(...roles) {
+  return (req, res, next) => {
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+      if (req.path && !req.path.startsWith('/api/')) return res.redirect('/');
+      return res.status(401).json({ message: 'Please log in first.' });
+    }
+    if (!roles.includes(user.role || 'admin')) {
+      if (req.path && !req.path.startsWith('/api/')) return res.redirect('/student');
+      return res.status(403).json({ message: 'You do not have permission to access this page.' });
+    }
+    req.adminUser = user;
+    next();
+  };
+}
+
 module.exports = {
   setAuthCookie,
   clearAuthCookie,
   requireAuth,
+  requireRole,
+  getAuthenticatedUser,
   isRequestAuthenticated,
 };

@@ -19,6 +19,8 @@ const {
   setAuthCookie,
   clearAuthCookie,
   requireAuth,
+  requireRole,
+  getAuthenticatedUser,
   isRequestAuthenticated,
 } = require('./src/auth');
 
@@ -46,10 +48,15 @@ app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
   const expectedUsername = process.env.ADMIN_USERNAME || 'admin';
   const expectedPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  const studentUsername = process.env.STUDENT_USERNAME?.trim();
+  const studentPassword = process.env.STUDENT_PASSWORD;
 
-  if (username === expectedUsername && password === expectedPassword) {
+  const isAdmin = username === expectedUsername && password === expectedPassword;
+  const isStudentUser = studentUsername && studentPassword && username === studentUsername && password === studentPassword;
+
+  if (isAdmin || isStudentUser) {
     try {
-      setAuthCookie(res, username);
+      setAuthCookie(res, username, isAdmin ? 'admin' : 'student');
       return res.json({ message: 'Login successful.' });
     } catch (error) {
       console.error('Login configuration error:', error);
@@ -66,14 +73,15 @@ app.post('/api/logout', (req, res) => {
 });
 
 app.get('/api/me', (req, res) => {
-  res.json({ authenticated: isRequestAuthenticated(req) });
+  const user = getAuthenticatedUser(req);
+  return res.json({ authenticated: Boolean(user), role: user?.role || null });
 });
 
-app.get('/api/google/status', requireAuth, (req, res) => {
+app.get('/api/google/status', requireRole('admin'), (req, res) => {
   res.json({ connected: isGoogleAuthorized() });
 });
 
-app.post('/api/google/reset-sheet', requireAuth, async (req, res) => {
+app.post('/api/google/reset-sheet', requireRole('admin'), async (req, res) => {
   try {
     const spreadsheetId = await resetStudentSheetHeaders();
     return res.json({ message: 'Google Sheet headers reset successfully.', spreadsheetId });
@@ -83,7 +91,7 @@ app.post('/api/google/reset-sheet', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/students/next-id', requireAuth, async (req, res) => {
+app.get('/api/students/next-id', requireRole('admin', 'student'), async (req, res) => {
   try {
     const nextStudentId = await getNextStudentIdFromSheet();
     return res.json({ nextStudentId });
@@ -93,7 +101,7 @@ app.get('/api/students/next-id', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/students', requireAuth, async (req, res) => {
+app.get('/api/students', requireRole('admin'), async (req, res) => {
   try {
     const students = await listStudentsFromSheet();
     return res.json({
@@ -115,7 +123,7 @@ app.get('/api/students', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/students/:id', requireAuth, async (req, res) => {
+app.get('/api/students/:id', requireRole('admin'), async (req, res) => {
   try {
     const students = await listStudentsFromSheet();
     const student = students.find((item) => Number(item.id) === Number(req.params.id));
@@ -147,7 +155,7 @@ app.get('/api/students/:id', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/photos/:fileId', requireAuth, async (req, res) => {
+app.get('/api/photos/:fileId', requireRole('admin'), async (req, res) => {
   try {
     const { buffer, mimeType } = await getDriveFileStream(req.params.fileId);
     res.set('Content-Type', mimeType);
@@ -159,7 +167,7 @@ app.get('/api/photos/:fileId', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/students', requireAuth, async (req, res) => {
+app.post('/api/students', requireRole('admin', 'student'), async (req, res) => {
   if (!isGoogleAuthorized()) {
     return res.status(503).json({
       message: 'Google backend is not configured. Add GOOGLE_REFRESH_TOKEN and the other Google environment variables.',
@@ -217,7 +225,7 @@ app.post('/api/students', requireAuth, async (req, res) => {
   }
 });
 
-app.put('/api/students/:id', requireAuth, async (req, res) => {
+app.put('/api/students/:id', requireRole('admin'), async (req, res) => {
   try {
     const students = await listStudentsFromSheet();
     const student = students.find((item) => Number(item.id) === Number(req.params.id));
@@ -257,7 +265,7 @@ app.put('/api/students/:id', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/students/:id/photos', requireAuth, upload.single('photo'), async (req, res) => {
+app.post('/api/students/:id/photos', requireRole('admin', 'student'), upload.single('photo'), async (req, res) => {
   try {
     const students = await listStudentsFromSheet();
     const student = students.find((item) => Number(item.id) === Number(req.params.id));
@@ -285,7 +293,7 @@ app.post('/api/students/:id/photos', requireAuth, upload.single('photo'), async 
   }
 });
 
-app.delete('/api/students/:id/photos/:fileId', requireAuth, async (req, res) => {
+app.delete('/api/students/:id/photos/:fileId', requireRole('admin'), async (req, res) => {
   try {
     const students = await listStudentsFromSheet();
     const student = students.find((item) => Number(item.id) === Number(req.params.id));
@@ -317,12 +325,12 @@ app.delete('/api/students/:id/photos/:fileId', requireAuth, async (req, res) => 
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/student', requireAuth, (req, res) => {
+app.get('/student', requireRole('admin', 'student'), (req, res) => {
   if (process.env.VERCEL) return res.redirect('/student.html');
   return res.sendFile(path.join(__dirname, 'public', 'student.html'));
 });
 
-app.get('/students', requireAuth, (req, res) => {
+app.get('/students', requireRole('admin'), (req, res) => {
   if (process.env.VERCEL) return res.redirect('/students.html');
   return res.sendFile(path.join(__dirname, 'public', 'students.html'));
 });
