@@ -73,7 +73,7 @@ function buildEditForm(student) {
   return `
     <form id="editStudentForm" class="edit-form">
       <div class="form-grid">
-        <div class="field"><label for="editStudentId">Student Number</label><input id="editStudentId" name="studentId" value="${escapeAttribute(student.student_id)}" required /></div>
+        <div class="field"><label for="editStudentId">Student Number</label><input id="editStudentId" name="studentId" value="${escapeAttribute(student.student_id)}" disabled /></div>
         <div class="field"><label for="editStudentName">Student Name</label><input id="editStudentName" name="studentName" value="${escapeAttribute(student.student_name)}" required /></div>
         <div class="field"><label for="editClassName">Class</label><input id="editClassName" name="className" value="${escapeAttribute(student.class_name)}" required /></div>
         <div class="field"><label for="editDivision">Division</label><input id="editDivision" name="division" value="${escapeAttribute(student.division)}" required /></div>
