@@ -10,7 +10,8 @@
   <main class="page-shell">
     <header class="topbar">
       <h2 class="topbar-title">Student Information</h2>
-      <div id="topbarActions" style="display:flex; gap:10px; align-items:center;">
+      <div style="display:flex; gap:10px; align-items:center;">
+        <a href="/students" class="secondary-btn" style="text-decoration:none; display:inline-block;">View Students</a>
         <button id="logoutBtn" class="secondary-btn" type="button">Logout</button>
       </div>
     </header>
@@ -19,11 +20,22 @@
       <h1>Add Student</h1>
       <p class="subtitle">Enter student details and select one or more photos.</p>
 
+      <section class="capture-guide" aria-labelledby="captureGuideTitle">
+        <h2 id="captureGuideTitle">Photo Capture Instructions</h2>
+        <picture>
+          <source srcset="/photo-capture-instructions.png" type="image/png" />
+          <img
+            src="/photo-capture-instructions.svg"
+            alt="Photo capture instructions showing left, right, front, and top face angles"
+          />
+        </picture>
+      </section>
+
       <form id="studentForm">
         <div class="form-grid">
           <div class="field">
             <label for="studentId">Student Number</label>
-            <input id="studentId" name="studentId" placeholder="STU001" required disabled />
+            <input id="studentId" name="studentId" placeholder="STU001" required />
           </div>
           <div class="field">
             <label for="studentName">Student Name</label>
@@ -60,6 +72,6 @@
     </section>
   </main>
   <script src="/image-utils.js"></script>
-  <script src="/student.js?v=2"></script>
+  <script src="/student.js"></script>
 </body>
 </html>

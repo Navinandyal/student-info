@@ -4,7 +4,6 @@ const previewGrid = document.getElementById('previewGrid');
 const statusBox = document.getElementById('status');
 const saveBtn = document.getElementById('saveBtn');
 const logoutBtn = document.getElementById('logoutBtn');
-const topbarActions = document.getElementById('topbarActions');
 
 let selectedFiles = [];
 
@@ -14,15 +13,6 @@ async function ensureAuthenticated() {
   if (!data.authenticated) {
     window.location.href = '/';
     return false;
-  }
-  if (data.role === 'admin' && topbarActions && !document.getElementById('viewStudentsBtn')) {
-    const viewStudentsBtn = document.createElement('a');
-    viewStudentsBtn.id = 'viewStudentsBtn';
-    viewStudentsBtn.href = '/students';
-    viewStudentsBtn.className = 'secondary-btn';
-    viewStudentsBtn.textContent = 'View Students';
-    viewStudentsBtn.style.textDecoration = 'none';
-    topbarActions.prepend(viewStudentsBtn);
   }
   return true;
 }
